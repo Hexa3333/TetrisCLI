@@ -14,16 +14,16 @@ LPCSTR TITLE = "TetrisCLI";
 
 typedef unsigned char uchar;
 
-enum Tetromino_Type
+typedef enum
 {
 	typeI, typeleftL, typerightL, typeblock,
 	typeleftZ, typerightZ, typeT
-};
+} Tetromino_Type;
 
 typedef struct
 {
 	char sprite[16];
-	enum Tetromino_Type type;
+	Tetromino_Type type;
 	COORD pos;
 	uint8_t rotation; // 0 - 1 - 2 - 3
 	bool isPlaced;
@@ -51,6 +51,7 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 */
 
 void CreateNewTetromino();
+void Rotate();
 
 int main(void)
 {
@@ -100,6 +101,9 @@ int main(void)
 		if (curTetromino->pos.Y < FIELD_HEIGHT-1 && GetKeyState(VK_DOWN) & 0x8000)
 			curTetromino->pos.Y++;
 
+		if (GetKeyState(0x41) & 0x8000) // A KEY
+			Rotate();
+
 		// --- Exit ---
 		if (GetKeyState(0x1B) & 0x8000) // ESC Key
 			break;
@@ -114,16 +118,13 @@ int main(void)
 				screen[(y + yFieldOffset) * screenWidth + (x + xFieldOffset)] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? '#' : ' ';
 
 		// --- the tetromino ---
-		for (int i = 0; i < 16; i++)
+		// UNCHECKABLE; THINK OF A BETTER WAY, it's gonna have to do for now
+		for (int i = 0; i < 4; i++)
 		{
-
+			memcpy(&screen[(curTetromino->pos.Y + i) * screenWidth + curTetromino->pos.X], &curTetromino->sprite[i*4], 4);
 		}
 
-		// UNCHECKABLE; THINK OF A BETTER WAY
-		// for (int i = 0; i < 4; i++)
-		// {
-		// 	memcpy(&screen[(curTetromino->pos.Y + i) * screenWidth + curTetromino->pos.X], &curTetromino->sprite[i*4], 4);
-		// }
+
 
 		// --- Swap Buffers ---
 		WriteConsoleOutputCharacterA(hConsole, screen, screenHeight * screenWidth, (COORD){0,0}, &dwCharsWritten);
@@ -155,4 +156,55 @@ void CreateNewTetromino()
 	// 		break;
 	// }
 
+}
+
+const char* GetOriginalSprite()
+{
+	switch (curTetromino->type)
+	{
+		case typeI:
+			return spriteI;
+		case typeleftL:
+			return spriteleftL;
+		case typerightL:
+			return spriterightL;
+		case typeblock:
+			return spriteblock;
+		case typeleftZ:
+			return spriteleftZ;
+		case typerightZ:
+			return spriterightZ;
+		case typeT:
+			return spriteT;
+	}
+}
+
+void Rotate()
+{
+	switch (curTetromino->rotation % 4)
+	{
+		case 0: // 0 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					curTetromino->sprite[y * 4 + x] = spriteI[y * 4 + x];
+			break;
+
+		case 1: // 90 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					curTetromino->sprite[y * 4 + x] = spriteI[12 + y - (x*4)];
+			break;
+		case 2:
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					curTetromino->sprite[y * 4 + x] = spriteI[15 - (y*4) - x];
+			break;
+		case 3: // 180 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					curTetromino->sprite[y * 4 + x] = spriteI[3 - y + (x*4)];
+			break;
+	}
+
+	curTetromino->rotation++;
 }
