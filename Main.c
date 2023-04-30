@@ -24,7 +24,7 @@ typedef struct
 {
 	char sprite[16];
 	char originalSprite[16];
-	bool xIndexes[16];
+	int cellOffsetFromL, cellOffsetFromR, cellOffsetFromBottom;
 	Tetromino_Type type;
 	COORD pos;
 	uint8_t rotation; // 0 - 1 - 2 - 3
@@ -91,12 +91,12 @@ int main(void)
 		Sleep(50);
 
 		// +++++++++++ Input +++++++++++
-		
+
 		// --- Arrow Keys (Movement) ---
-		if (curTetromino->pos.X > xFieldOffset+1 && GetKeyState(VK_LEFT) & 0x8000)
+		if (curTetromino->pos.X > (xFieldOffset + 1 - curTetromino->cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
 			curTetromino->pos.X--;
 
-		else if (curTetromino->pos.X < (FIELD_WIDTH-1) && GetKeyState(VK_RIGHT) & 0x8000)
+		else if (curTetromino->pos.X < (FIELD_WIDTH-1 + curTetromino->cellOffsetFromR) && GetKeyState(VK_RIGHT) & 0x8000)
 			curTetromino->pos.X++;	
 
 		if (curTetromino->pos.Y < FIELD_HEIGHT-1 && GetKeyState(VK_DOWN) & 0x8000)
@@ -190,8 +190,39 @@ void CreateNewTetromino()
 			break;
 	}
 
-	for (int i = 0; i < 16; i++)
-		curTetromino->xIndexes[i] = (curTetromino->sprite[i] == 'X') ? 1 : 0;
+
+	// Collision Controls
+
+	curTetromino->cellOffsetFromL = 0;
+	curTetromino->cellOffsetFromR = 0;
+	curTetromino->cellOffsetFromBottom = 0;
+
+	// IMPORTANT:
+	// Ordering is important! By going with an x outer and y inner loop, we are checking column by column in the 4x4 matrix instead of row by row
+
+	// Left
+	for (int x = 0; x < 4; x++)
+		for (int y = 0; y < 4; y++)
+			if (curTetromino->sprite[y * 4 + x] == 'X')
+			{
+				curTetromino->cellOffsetFromL = x;
+				goto offsetLExit;
+			}
+	offsetLExit:
+
+	// Right
+	for (int x = 3; x >= 0; x--)
+		for (int y = 3; y >= 0; y--)
+			if (curTetromino->sprite[y * 4 + x] == 'X')
+			{
+				curTetromino->cellOffsetFromR = 3 - x;
+				goto offsetRExit;
+			}
+	offsetRExit:
+
+	FILE* testfp = fopen("test.txt", "w");
+	fprintf(testfp, "CellOffsetL: %d, CellOffsetR: %d\n", curTetromino->cellOffsetFromL, curTetromino->cellOffsetFromR);
+	fclose(testfp);
 }
 
 void Rotate()
@@ -225,7 +256,28 @@ void Rotate()
 			break;
 	}
 
-	// Recalculate X Indexes
-	for (int i = 0; i < 16; i++)
-		curTetromino->xIndexes[i] = (curTetromino->sprite[i] == 'X') ? 1 : 0;
+	// Recalculate Colissions
+	// Left
+	for (int x = 0; x < 4; x++)
+		for (int y = 0; y < 4; y++)
+			if (curTetromino->sprite[y * 4 + x] == 'X')
+			{
+				curTetromino->cellOffsetFromL = x;
+				goto offsetLExit;
+			}
+	offsetLExit:
+
+	// Right
+	for (int x = 3; x >= 0; x--)
+		for (int y = 3; y >= 0; y--)
+			if (curTetromino->sprite[y * 4 + x] == 'X')
+			{
+				curTetromino->cellOffsetFromR = 3 - x;
+				goto offsetRExit;
+			}
+	offsetRExit:
+
+	FILE* testfp = fopen("test.txt", "a");
+	fprintf(testfp, "CellOffsetL: %d, CellOffsetR: %d\n", curTetromino->cellOffsetFromL, curTetromino->cellOffsetFromR);
+	fclose(testfp);
 }
