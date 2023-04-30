@@ -23,6 +23,7 @@ typedef enum
 typedef struct
 {
 	char sprite[16];
+	char originalSprite[16];
 	Tetromino_Type type;
 	COORD pos;
 	uint8_t rotation; // 0 - 1 - 2 - 3
@@ -55,6 +56,7 @@ void Rotate();
 
 int main(void)
 {
+	newgame:
 	HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0,
 												NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	
@@ -88,15 +90,13 @@ int main(void)
 		Sleep(50);
 
 		// +++++++++++ Input +++++++++++
+		
 		// --- Arrow Keys (Movement) ---
 		if (curTetromino->pos.X > xFieldOffset+1 && GetKeyState(VK_LEFT) & 0x8000)
-		{
 			curTetromino->pos.X--;
-		} 
+
 		else if (curTetromino->pos.X < (FIELD_WIDTH-1) && GetKeyState(VK_RIGHT) & 0x8000)
-		{
 			curTetromino->pos.X++;	
-		}
 
 		if (curTetromino->pos.Y < FIELD_HEIGHT-1 && GetKeyState(VK_DOWN) & 0x8000)
 			curTetromino->pos.Y++;
@@ -107,6 +107,8 @@ int main(void)
 		// --- Exit ---
 		if (GetKeyState(0x1B) & 0x8000) // ESC Key
 			break;
+
+		// +++++++++++ Game Logic ++++++++++
 
 
 		// +++++++++++ Rendering +++++++++++
@@ -134,6 +136,9 @@ int main(void)
 	free(screen);
 	
 	system("pause");
+	#if 0
+	goto newgame;
+	#endif
 	return EXIT_SUCCESS;
 }
 
@@ -142,69 +147,77 @@ void CreateNewTetromino()
 	curTetromino->pos = startingPosition;
 	curTetromino->rotation = 0;
 
-	srand(time(0));
+	srand(time(NULL));
 	int random = rand() % 7;
-
-	strcpy(curTetromino->sprite, spriteI);
 	
-	// TODO:
-	// switch (random)
-	// {
-	// 	case 0: // typeI
-	// 		newTetromino.type = typeI;
-	// 		strcpy(newTetromino.sprite, spriteI, 16);
-	// 		break;
-	// }
-
-}
-
-const char* GetOriginalSprite()
-{
-	switch (curTetromino->type)
+	switch (random)
 	{
-		case typeI:
-			return spriteI;
-		case typeleftL:
-			return spriteleftL;
-		case typerightL:
-			return spriterightL;
-		case typeblock:
-			return spriteblock;
-		case typeleftZ:
-			return spriteleftZ;
-		case typerightZ:
-			return spriterightZ;
-		case typeT:
-			return spriteT;
+		case 0:
+			curTetromino->type = typeI;
+			strcpy(curTetromino->sprite, spriteI);
+			strcpy(curTetromino->originalSprite, spriteI); // The only way that worked for me...
+			break;
+		case 1:
+			curTetromino->type = typeleftL;
+			strcpy(curTetromino->sprite, spriteleftL);
+			strcpy(curTetromino->originalSprite, spriteleftL);
+			break;
+		case 2:
+			curTetromino->type = typerightL;
+			strcpy(curTetromino->sprite, spriterightL);
+			strcpy(curTetromino->originalSprite, spriterightL);
+			break;
+		case 3:
+			curTetromino->type = typeblock;
+			strcpy(curTetromino->sprite, spriteblock);
+			strcpy(curTetromino->originalSprite, spriteblock);
+			break;
+		case 4:
+			curTetromino->type = typeleftZ;
+			strcpy(curTetromino->sprite, spriteleftZ);
+			strcpy(curTetromino->originalSprite, spriteleftZ);
+			break;
+		case 5:
+			curTetromino->type = typerightZ;
+			strcpy(curTetromino->sprite, spriterightZ);
+			strcpy(curTetromino->originalSprite, spriterightZ);
+			break;
+		case 6:
+			curTetromino->type = typeT;
+			strcpy(curTetromino->sprite, spriteT);
+			strcpy(curTetromino->originalSprite, spriteT);
+			break;
 	}
 }
 
 void Rotate()
 {
+	curTetromino->rotation++;
+
 	switch (curTetromino->rotation % 4)
 	{
 		case 0: // 0 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = spriteI[y * 4 + x];
+					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[y * 4 + x];
 			break;
-
+			
 		case 1: // 90 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = spriteI[12 + y - (x*4)];
+					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[12 + y - (x*4)];
 			break;
-		case 2:
+
+		case 2: // 180 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = spriteI[15 - (y*4) - x];
+					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[15 - (y*4) - x];
 			break;
-		case 3: // 180 deg
+			
+		case 3: // 270 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = spriteI[3 - y + (x*4)];
+					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[3 - y + (x*4)];
 			break;
 	}
-
-	curTetromino->rotation++;
 }
