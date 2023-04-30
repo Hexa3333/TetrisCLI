@@ -24,6 +24,7 @@ typedef struct
 {
 	char sprite[16];
 	char originalSprite[16];
+	bool xIndexes[16];
 	Tetromino_Type type;
 	COORD pos;
 	uint8_t rotation; // 0 - 1 - 2 - 3
@@ -188,6 +189,9 @@ void CreateNewTetromino()
 			strcpy(curTetromino->originalSprite, spriteT);
 			break;
 	}
+
+	for (int i = 0; i < 16; i++)
+		curTetromino->xIndexes[i] = (curTetromino->sprite[i] == 'X') ? 1 : 0;
 }
 
 void Rotate()
@@ -220,4 +224,8 @@ void Rotate()
 					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[3 - y + (x*4)];
 			break;
 	}
+
+	// Recalculate X Indexes
+	for (int i = 0; i < 16; i++)
+		curTetromino->xIndexes[i] = (curTetromino->sprite[i] == 'X') ? 1 : 0;
 }
