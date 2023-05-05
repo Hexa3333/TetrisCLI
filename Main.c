@@ -93,11 +93,10 @@ int main(void)
 		// +++++++++++ Input +++++++++++
 
 		// --- Arrow Keys (Movement) ---
-		if (curTetromino->pos.X > (xFieldOffset + 1 - curTetromino->cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
+		if (curTetromino->pos.X > (xFieldOffset+1 - curTetromino->cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
 			curTetromino->pos.X--;
-
 		else if (curTetromino->pos.X < (FIELD_WIDTH-1 + curTetromino->cellOffsetFromR) && GetKeyState(VK_RIGHT) & 0x8000)
-			curTetromino->pos.X++;	
+			curTetromino->pos.X++;
 
 		if (curTetromino->pos.Y < FIELD_HEIGHT-1 && GetKeyState(VK_DOWN) & 0x8000)
 			curTetromino->pos.Y++;
@@ -120,12 +119,13 @@ int main(void)
 				// If the pixel is a border, put a #
 				screen[(y + yFieldOffset) * screenWidth + (x + xFieldOffset)] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? '#' : ' ';
 
-		// --- the tetromino ---
-		// UNCHECKABLE; THINK OF A BETTER WAY, it's gonna have to do for now
+		// --- the current tetromino ---
 		for (int i = 0; i < 4; i++)
-		{
-			memcpy(&screen[(curTetromino->pos.Y + i) * screenWidth + curTetromino->pos.X], &curTetromino->sprite[i*4], 4);
-		}
+			for (int j = 0; j < 4; j++)
+			{
+				if (curTetromino->sprite[i * 4 + j] == 'X')
+					screen[(curTetromino->pos.Y + i) * screenWidth + curTetromino->pos.X + j] = curTetromino->sprite[i * 4 + j];
+			}
 
 
 
@@ -156,7 +156,7 @@ void CreateNewTetromino()
 		case 0:
 			curTetromino->type = typeI;
 			strcpy(curTetromino->sprite, spriteI);
-			strcpy(curTetromino->originalSprite, spriteI); // The only way that worked for me...
+			strcpy(curTetromino->originalSprite, spriteI);
 			break;
 		case 1:
 			curTetromino->type = typeleftL;
@@ -220,9 +220,9 @@ void CreateNewTetromino()
 			}
 	offsetRExit:
 
-	FILE* testfp = fopen("test.txt", "w");
-	fprintf(testfp, "CellOffsetL: %d, CellOffsetR: %d\n", curTetromino->cellOffsetFromL, curTetromino->cellOffsetFromR);
-	fclose(testfp);
+	// TODO: Offset from bottom
+
+	offsetBExit:
 }
 
 void Rotate()
@@ -276,8 +276,4 @@ void Rotate()
 				goto offsetRExit;
 			}
 	offsetRExit:
-
-	FILE* testfp = fopen("test.txt", "a");
-	fprintf(testfp, "CellOffsetL: %d, CellOffsetR: %d\n", curTetromino->cellOffsetFromL, curTetromino->cellOffsetFromR);
-	fclose(testfp);
 }
