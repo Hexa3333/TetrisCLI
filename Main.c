@@ -7,10 +7,14 @@
 
 #include <Windows.h>
 
+LPCSTR TITLE = "TetrisCLI";
+
 #define FIELD_WIDTH 12
 #define FIELD_HEIGHT 18
+
 int screenWidth, screenHeight;
-LPCSTR TITLE = "TetrisCLI";
+
+bool bField[FIELD_WIDTH * FIELD_HEIGHT];
 
 typedef unsigned char uchar;
 
@@ -20,7 +24,7 @@ typedef enum
 	typeleftZ, typerightZ, typeT
 } Tetromino_Type;
 
-typedef struct
+struct _Tetromino
 {
 	char sprite[16];
 	char originalSprite[16];
@@ -29,8 +33,7 @@ typedef struct
 	COORD pos;
 	uint8_t rotation; // 0 - 1 - 2 - 3
 	bool isPlaced;
-} Tetromino;
-Tetromino* curTetromino;
+} curTetromino;
 
 // Starting position of our tetrominos
 COORD startingPosition;
@@ -54,6 +57,7 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 
 void CreateNewTetromino();
 void Rotate();
+void Emplace();
 
 int main(void)
 {
@@ -81,7 +85,10 @@ int main(void)
 	startingPosition.X = (FIELD_WIDTH / 2) + xFieldOffset;
 	startingPosition.Y = yFieldOffset;
 
-	curTetromino = malloc(sizeof(Tetromino));
+	for (int y = 0; y < FIELD_HEIGHT; y++)
+			for (int x = 0; x < FIELD_WIDTH; x++)
+				bField[y * FIELD_WIDTH + x] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? 1 : 0;
+
 	CreateNewTetromino(); // We'll have to start with something
 
 	bool keepRunning = true;
@@ -93,15 +100,15 @@ int main(void)
 		// +++++++++++ Input +++++++++++
 
 		// --- Arrow Keys (Movement) ---
-		if (curTetromino->pos.X > (xFieldOffset+1 - curTetromino->cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
-			curTetromino->pos.X--;
-		else if (curTetromino->pos.X < (FIELD_WIDTH-1 + curTetromino->cellOffsetFromR) && GetKeyState(VK_RIGHT) & 0x8000)
-			curTetromino->pos.X++;
+		if (curTetromino.pos.X > (xFieldOffset+1 - curTetromino.cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
+			curTetromino.pos.X--;
+		else if (curTetromino.pos.X < (FIELD_WIDTH-1 + curTetromino.cellOffsetFromR) && GetKeyState(VK_RIGHT) & 0x8000)
+			curTetromino.pos.X++;
 
-		if (curTetromino->pos.Y < FIELD_HEIGHT-1 && GetKeyState(VK_DOWN) & 0x8000)
-			curTetromino->pos.Y++;
+		if (curTetromino.pos.Y < (FIELD_HEIGHT-1 + curTetromino.cellOffsetFromBottom) && GetKeyState(VK_DOWN) & 0x8000)
+			curTetromino.pos.Y++;
 
-		if (GetKeyState(0x41) & 0x8000) // A KEY
+		if (GetKeyState('A') & 0x8000)
 			Rotate();
 
 		// --- Exit ---
@@ -110,21 +117,20 @@ int main(void)
 
 		// +++++++++++ Game Logic ++++++++++
 
-
 		// +++++++++++ Rendering +++++++++++
 
 		// --- the field ---
 		for (int y = 0; y < FIELD_HEIGHT; y++)
 			for (int x = 0; x < FIELD_WIDTH; x++)
-				// If the pixel is a border, put a #
-				screen[(y + yFieldOffset) * screenWidth + (x + xFieldOffset)] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? '#' : ' ';
+				// If the pixel is filled, put a #
+				screen[(y + yFieldOffset) * screenWidth + (x + xFieldOffset)] = (bField[y * FIELD_WIDTH + x]) ? '#' : ' ';
 
 		// --- the current tetromino ---
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
 			{
-				if (curTetromino->sprite[i * 4 + j] == 'X')
-					screen[(curTetromino->pos.Y + i) * screenWidth + curTetromino->pos.X + j] = curTetromino->sprite[i * 4 + j];
+				if (curTetromino.sprite[i * 4 + j] == 'X')
+					screen[(curTetromino.pos.Y + i) * screenWidth + curTetromino.pos.X + j] = curTetromino.sprite[i * 4 + j];
 			}
 
 
@@ -145,8 +151,8 @@ int main(void)
 
 void CreateNewTetromino()
 {
-	curTetromino->pos = startingPosition;
-	curTetromino->rotation = 0;
+	curTetromino.pos = startingPosition;
+	curTetromino.rotation = 0;
 
 	srand(time(NULL));
 	int random = rand() % 7;
@@ -154,48 +160,41 @@ void CreateNewTetromino()
 	switch (random)
 	{
 		case 0:
-			curTetromino->type = typeI;
-			strcpy(curTetromino->sprite, spriteI);
-			strcpy(curTetromino->originalSprite, spriteI);
+			curTetromino.type = typeI;
+			strcpy(curTetromino.sprite, spriteI);
+			strcpy(curTetromino.originalSprite, spriteI);
 			break;
 		case 1:
-			curTetromino->type = typeleftL;
-			strcpy(curTetromino->sprite, spriteleftL);
-			strcpy(curTetromino->originalSprite, spriteleftL);
+			curTetromino.type = typeleftL;
+			strcpy(curTetromino.sprite, spriteleftL);
+			strcpy(curTetromino.originalSprite, spriteleftL);
 			break;
 		case 2:
-			curTetromino->type = typerightL;
-			strcpy(curTetromino->sprite, spriterightL);
-			strcpy(curTetromino->originalSprite, spriterightL);
+			curTetromino.type = typerightL;
+			strcpy(curTetromino.sprite, spriterightL);
+			strcpy(curTetromino.originalSprite, spriterightL);
 			break;
 		case 3:
-			curTetromino->type = typeblock;
-			strcpy(curTetromino->sprite, spriteblock);
-			strcpy(curTetromino->originalSprite, spriteblock);
+			curTetromino.type = typeblock;
+			strcpy(curTetromino.sprite, spriteblock);
+			strcpy(curTetromino.originalSprite, spriteblock);
 			break;
 		case 4:
-			curTetromino->type = typeleftZ;
-			strcpy(curTetromino->sprite, spriteleftZ);
-			strcpy(curTetromino->originalSprite, spriteleftZ);
+			curTetromino.type = typeleftZ;
+			strcpy(curTetromino.sprite, spriteleftZ);
+			strcpy(curTetromino.originalSprite, spriteleftZ);
 			break;
 		case 5:
-			curTetromino->type = typerightZ;
-			strcpy(curTetromino->sprite, spriterightZ);
-			strcpy(curTetromino->originalSprite, spriterightZ);
+			curTetromino.type = typerightZ;
+			strcpy(curTetromino.sprite, spriterightZ);
+			strcpy(curTetromino.originalSprite, spriterightZ);
 			break;
 		case 6:
-			curTetromino->type = typeT;
-			strcpy(curTetromino->sprite, spriteT);
-			strcpy(curTetromino->originalSprite, spriteT);
+			curTetromino.type = typeT;
+			strcpy(curTetromino.sprite, spriteT);
+			strcpy(curTetromino.originalSprite, spriteT);
 			break;
 	}
-
-
-	// Collision Controls
-
-	curTetromino->cellOffsetFromL = 0;
-	curTetromino->cellOffsetFromR = 0;
-	curTetromino->cellOffsetFromBottom = 0;
 
 	// IMPORTANT:
 	// Ordering is important! By going with an x outer and y inner loop, we are checking column by column in the 4x4 matrix instead of row by row
@@ -203,9 +202,9 @@ void CreateNewTetromino()
 	// Left
 	for (int x = 0; x < 4; x++)
 		for (int y = 0; y < 4; y++)
-			if (curTetromino->sprite[y * 4 + x] == 'X')
+			if (curTetromino.sprite[y * 4 + x] == 'X')
 			{
-				curTetromino->cellOffsetFromL = x;
+				curTetromino.cellOffsetFromL = x;
 				goto offsetLExit;
 			}
 	offsetLExit:
@@ -213,46 +212,53 @@ void CreateNewTetromino()
 	// Right
 	for (int x = 3; x >= 0; x--)
 		for (int y = 3; y >= 0; y--)
-			if (curTetromino->sprite[y * 4 + x] == 'X')
+			if (curTetromino.sprite[y * 4 + x] == 'X')
 			{
-				curTetromino->cellOffsetFromR = 3 - x;
+				curTetromino.cellOffsetFromR = 3 - x;
 				goto offsetRExit;
 			}
 	offsetRExit:
 
 	// TODO: Offset from bottom
-
+	for (int y = 3; y >= 0; y--)
+		for (int x = 3; x >= 0; x--)
+			if (curTetromino.sprite[y * 4 + x] == 'X')
+			{
+				curTetromino.cellOffsetFromBottom = 3 - y;
+				goto offsetBExit;
+			}
 	offsetBExit:
+
 }
 
 void Rotate()
 {
-	curTetromino->rotation++;
+	curTetromino.rotation++;
 
-	switch (curTetromino->rotation % 4)
+	switch (curTetromino.rotation % 4)
 	{
 		case 0: // 0 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[y * 4 + x];
+					curTetromino.sprite[y * 4 + x] = curTetromino.originalSprite[y * 4 + x];
 			break;
 			
 		case 1: // 90 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[12 + y - (x*4)];
+					curTetromino.sprite[y * 4 + x] = curTetromino.originalSprite[12 + y - (x*4)];
 			break;
 
 		case 2: // 180 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[15 - (y*4) - x];
+					curTetromino.sprite[y * 4 + x] = curTetromino.originalSprite[15 - (y*4) - x];
 			break;
 			
 		case 3: // 270 deg
 			for (int y = 0; y < 4; y++)
 				for (int x = 0; x < 4; x++)
-					curTetromino->sprite[y * 4 + x] = curTetromino->originalSprite[3 - y + (x*4)];
+					curTetromino.sprite[y * 4 + x] = curTetromino.originalSprite[3 - y + (x*4)];
 			break;
 	}
 
@@ -260,9 +266,9 @@ void Rotate()
 	// Left
 	for (int x = 0; x < 4; x++)
 		for (int y = 0; y < 4; y++)
-			if (curTetromino->sprite[y * 4 + x] == 'X')
+			if (curTetromino.sprite[y * 4 + x] == 'X')
 			{
-				curTetromino->cellOffsetFromL = x;
+				curTetromino.cellOffsetFromL = x;
 				goto offsetLExit;
 			}
 	offsetLExit:
@@ -270,10 +276,31 @@ void Rotate()
 	// Right
 	for (int x = 3; x >= 0; x--)
 		for (int y = 3; y >= 0; y--)
-			if (curTetromino->sprite[y * 4 + x] == 'X')
+			if (curTetromino.sprite[y * 4 + x] == 'X')
 			{
-				curTetromino->cellOffsetFromR = 3 - x;
+				curTetromino.cellOffsetFromR = 3 - x;
 				goto offsetRExit;
 			}
 	offsetRExit:
+
+	// Bottom
+	for (int y = 3; y >= 0; y--)
+		for (int x = 3; x >= 0; x--)
+			if (curTetromino.sprite[y * 4 + x] == 'X')
+			{
+				curTetromino.cellOffsetFromBottom = 3 - y;
+				goto offsetBExit;
+			}
+	offsetBExit:
+
+}
+
+void Emplace()
+{
+	for (int y = 0; y < 4; y++)
+		for (int x = 0; x < 4; x++)
+			if (curTetromino.sprite[y * 4 + x] == 'X') 
+				bField[(curTetromino.pos.Y + (y-4)) * FIELD_WIDTH + curTetromino.pos.X + (x-4)] = 1;
+	
+	CreateNewTetromino();
 }
