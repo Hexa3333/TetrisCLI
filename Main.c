@@ -13,10 +13,14 @@ LPCSTR TITLE = "TetrisCLI";
 #define FIELD_HEIGHT 18
 
 int screenWidth, screenHeight;
+int score;
 
 bool bField[FIELD_WIDTH * FIELD_HEIGHT];
+int xFieldOffset = 4, yFieldOffset = 4;
 
 typedef unsigned char uchar;
+#define FILLED true
+#define EMPTY false
 
 typedef enum
 {
@@ -58,10 +62,26 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 void CreateNewTetromino();
 void Rotate();
 void Emplace();
+bool CanMoveDown();
 
+void dbgPrintField()
+{
+	FILE* fpTable = fopen("Field.txt", "w");
+	for (int y = 0; y < FIELD_HEIGHT; y++)
+	{
+		for (int x = 0; x < FIELD_WIDTH; x++)
+		{
+			if (bField[y * FIELD_WIDTH + x]) fputc('#', fpTable);
+			else                             fputc(' ', fpTable);
+		}
+		fputc('\n', fpTable);
+	}
+	fclose(fpTable);
+}
 int main(void)
 {
 	newgame:
+	score = 0;
 	HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0,
 												NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	
@@ -70,13 +90,11 @@ int main(void)
 		GetConsoleScreenBufferInfo(hConsole, &csbi);
 		screenWidth = csbi.dwSize.X;
 		screenHeight = csbi.dwSize.Y;
-	}	// This scope is only put here for deallocating the now useless csbi
+	}
 
 	SetConsoleTitleA(TITLE);
 	if (!SetConsoleActiveScreenBuffer(hConsole)) return EXIT_FAILURE;
 	DWORD dwCharsWritten;
-
-	int xFieldOffset = 4, yFieldOffset = 4;
 
 	uchar* screen = (uchar*) malloc(screenWidth * screenHeight);
 	for (int i = 0; i < screenWidth * screenHeight; i++) // Clearing the buffer
@@ -87,17 +105,27 @@ int main(void)
 
 	for (int y = 0; y < FIELD_HEIGHT; y++)
 			for (int x = 0; x < FIELD_WIDTH; x++)
-				bField[y * FIELD_WIDTH + x] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? 1 : 0;
+				bField[y * FIELD_WIDTH + x] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? FILLED : EMPTY;
 
 	CreateNewTetromino(); // We'll have to start with something
-
+	
 	bool keepRunning = true;
 	while (keepRunning)
 	{
 		// Timing
-		Sleep(50);
+		Sleep(30);
 
 		// +++++++++++ Input +++++++++++
+		if (GetKeyState(VK_SHIFT) & 0x8000)
+		{
+			FILE* testerfp = fopen("test.txt", "a+");
+			if (CanMoveDown())
+				fprintf(testerfp, "YES ");
+			else fprintf(testerfp, "NO ");
+			fclose(testerfp);
+			dbgPrintField();
+		}
+		if (GetKeyState(' ') & 0x8000) Emplace();
 
 		// --- Arrow Keys (Movement) ---
 		if (curTetromino.pos.X > (xFieldOffset+1 - curTetromino.cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
@@ -116,7 +144,9 @@ int main(void)
 			break;
 
 		// +++++++++++ Game Logic ++++++++++
+		if (curTetromino.pos.Y + 4 - curTetromino.cellOffsetFromBottom == FIELD_HEIGHT + yFieldOffset - 1) Emplace();
 
+		//curTetromino.pos.Y++;
 		// +++++++++++ Rendering +++++++++++
 
 		// --- the field ---
@@ -135,7 +165,7 @@ int main(void)
 
 
 
-		// --- Swap Buffers ---
+		// --- Display Buffer ---
 		WriteConsoleOutputCharacterA(hConsole, screen, screenHeight * screenWidth, (COORD){0,0}, &dwCharsWritten);
 	}
 
@@ -219,7 +249,7 @@ void CreateNewTetromino()
 			}
 	offsetRExit:
 
-	// TODO: Offset from bottom
+	// Bottom
 	for (int y = 3; y >= 0; y--)
 		for (int x = 3; x >= 0; x--)
 			if (curTetromino.sprite[y * 4 + x] == 'X')
@@ -228,7 +258,6 @@ void CreateNewTetromino()
 				goto offsetBExit;
 			}
 	offsetBExit:
-
 }
 
 void Rotate()
@@ -299,8 +328,23 @@ void Emplace()
 {
 	for (int y = 0; y < 4; y++)
 		for (int x = 0; x < 4; x++)
-			if (curTetromino.sprite[y * 4 + x] == 'X') 
-				bField[(curTetromino.pos.Y + (y-4)) * FIELD_WIDTH + curTetromino.pos.X + (x-4)] = 1;
+			if (curTetromino.sprite[y * 4 + x] == 'X')
+				bField[(curTetromino.pos.Y + (y-4)) * FIELD_WIDTH + curTetromino.pos.X + (x-4)] = FILLED;
 	
 	CreateNewTetromino();
+}
+
+bool CanMoveDown()
+{
+	bool lastRowFilled[4];
+	for (int i = 0; i < 4; i++)
+	{
+		lastRowFilled[i] = (curTetromino.sprite[(3 - curTetromino.cellOffsetFromBottom) * 4 + i] == 'X');
+		if (lastRowFilled[i] && bField[(curTetromino.pos.Y - yFieldOffset + 3 - curTetromino.cellOffsetFromBottom + 1) * FIELD_WIDTH + curTetromino.pos.X - xFieldOffset + i])
+			return false;
+	}
+	// if (bField[(curTetromino.pos.Y - yFieldOffset + 3 + 1) * FIELD_WIDTH + curTetromino.pos.X - xFieldOffset])
+	// 		return false;
+
+    return true;
 }
