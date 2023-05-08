@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <sys/utime.h>
 
 #include <Windows.h>
 
@@ -78,6 +79,7 @@ void dbgPrintField()
 	}
 	fclose(fpTable);
 }
+
 int main(void)
 {
 	newgame:
@@ -108,23 +110,18 @@ int main(void)
 				bField[y * FIELD_WIDTH + x] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT - 1) ? FILLED : EMPTY;
 
 	CreateNewTetromino(); // We'll have to start with something
-	
-	bool keepRunning = true;
-	while (keepRunning)
+
+	int gameSpeed = 20;
+	int gameSpeedCounter = 0;
+	while (true)
 	{
 		// Timing
-		Sleep(30);
-
+		Sleep(50);
+		gameSpeedCounter++;
+		bool bforceDown = (gameSpeed == gameSpeedCounter);
+		if (bforceDown) gameSpeedCounter = 0;
+		
 		// +++++++++++ Input +++++++++++
-		if (GetKeyState(VK_SHIFT) & 0x8000)
-		{
-			FILE* testerfp = fopen("test.txt", "a+");
-			if (CanMoveDown())
-				fprintf(testerfp, "YES ");
-			else fprintf(testerfp, "NO ");
-			fclose(testerfp);
-			dbgPrintField();
-		}
 		if (GetKeyState(' ') & 0x8000) Emplace();
 
 		// --- Arrow Keys (Movement) ---
@@ -144,9 +141,12 @@ int main(void)
 			break;
 
 		// +++++++++++ Game Logic ++++++++++
-		if (curTetromino.pos.Y + 4 - curTetromino.cellOffsetFromBottom == FIELD_HEIGHT + yFieldOffset - 1) Emplace();
+		if (bforceDown)
+		{
+			if (CanMoveDown()) curTetromino.pos.Y++;
+			else Emplace();
+		}
 
-		//curTetromino.pos.Y++;
 		// +++++++++++ Rendering +++++++++++
 
 		// --- the field ---
