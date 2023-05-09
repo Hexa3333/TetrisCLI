@@ -63,6 +63,7 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 void CreateNewTetromino();
 void Rotate();
 void Emplace();
+bool CanRotate();
 bool CanMoveLeft();
 bool CanMoveRight();
 bool CanMoveDown();
@@ -136,7 +137,7 @@ int main(void)
 		if (GetKeyState(VK_DOWN) & 0x8000 && CanMoveDown())
 			curTetromino.pos.Y++;
 
-		if (GetKeyState('A') & 0x8000)
+		if (GetKeyState('A') & 0x8000 && CanRotate())
 			Rotate();
 
 		// --- Exit ---
@@ -332,9 +333,52 @@ void Emplace()
 	for (int y = 0; y < 4; y++)
 		for (int x = 0; x < 4; x++)
 			if (curTetromino.sprite[y * 4 + x] == 'X')
-				bField[(curTetromino.pos.Y + (y-4)) * FIELD_WIDTH + curTetromino.pos.X + (x-4)] = FILLED;
+				bField[(curTetromino.pos.Y + (y-yFieldOffset)) * FIELD_WIDTH + curTetromino.pos.X + (x-xFieldOffset)] = FILLED;
 	
 	CreateNewTetromino();
+}
+
+bool CanRotate()
+{
+	char pseudoNextSprite[17];
+	switch ((curTetromino.rotation+1) % 4)
+	{
+		case 0: // 0 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					pseudoNextSprite[y * 4 + x] = curTetromino.originalSprite[y * 4 + x];
+			break;
+			
+		case 1: // 90 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					pseudoNextSprite[y * 4 + x] = curTetromino.originalSprite[12 + y - (x*4)];
+			break;
+
+		case 2: // 180 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					pseudoNextSprite[y * 4 + x] = curTetromino.originalSprite[15 - (y*4) - x];
+			break;
+			
+		case 3: // 270 deg
+			for (int y = 0; y < 4; y++)
+				for (int x = 0; x < 4; x++)
+					pseudoNextSprite[y * 4 + x] = curTetromino.originalSprite[3 - y + (x*4)];
+			break;
+	} 
+
+	for (int y = 0; y < 4; y++)
+	{
+		for (int x = 0; x < 4; x++)
+		{
+			if (pseudoNextSprite[y*4+x] == 'X' &&
+				bField[(curTetromino.pos.Y - yFieldOffset + y) * FIELD_WIDTH + curTetromino.pos.X - xFieldOffset + x])
+				return false;
+		}
+	}
+
+	return true;
 }
 
 bool CanMoveLeft()
@@ -350,7 +394,7 @@ bool CanMoveLeft()
 	return true;
 }
 
-bool CanMoveRight()
+bool CanMoveRight() // Might be buggy, not tested enough
 {
 	bool lastColumnFilled[4];
 	for (int i = 0; i < 4; i++)
