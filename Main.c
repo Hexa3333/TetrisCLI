@@ -63,6 +63,8 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 void CreateNewTetromino();
 void Rotate();
 void Emplace();
+bool CanMoveLeft();
+bool CanMoveRight();
 bool CanMoveDown();
 
 void dbgPrintField()
@@ -125,12 +127,13 @@ int main(void)
 		if (GetKeyState(' ') & 0x8000) Emplace();
 
 		// --- Arrow Keys (Movement) ---
-		if (curTetromino.pos.X > (xFieldOffset+1 - curTetromino.cellOffsetFromL) && GetKeyState(VK_LEFT) & 0x8000)
+		if (GetKeyState(VK_LEFT) & 0x8000 && CanMoveLeft())
 			curTetromino.pos.X--;
-		else if (curTetromino.pos.X < (FIELD_WIDTH-1 + curTetromino.cellOffsetFromR) && GetKeyState(VK_RIGHT) & 0x8000)
+
+		else if (GetKeyState(VK_RIGHT) & 0x8000 && CanMoveRight())
 			curTetromino.pos.X++;
 
-		if (curTetromino.pos.Y < (FIELD_HEIGHT-1 + curTetromino.cellOffsetFromBottom) && GetKeyState(VK_DOWN) & 0x8000)
+		if (GetKeyState(VK_DOWN) & 0x8000 && CanMoveDown())
 			curTetromino.pos.Y++;
 
 		if (GetKeyState('A') & 0x8000)
@@ -332,6 +335,32 @@ void Emplace()
 				bField[(curTetromino.pos.Y + (y-4)) * FIELD_WIDTH + curTetromino.pos.X + (x-4)] = FILLED;
 	
 	CreateNewTetromino();
+}
+
+bool CanMoveLeft()
+{
+	bool firstColumnFilled[4];
+	for (int i = 0; i < 4; i++)
+	{
+		firstColumnFilled[i] = (curTetromino.sprite[i * 4 + curTetromino.cellOffsetFromL] == 'X');
+		if (firstColumnFilled[i] && bField[curTetromino.pos.X - xFieldOffset + curTetromino.cellOffsetFromL - 1 + ((curTetromino.pos.Y - yFieldOffset + i) * FIELD_WIDTH)])
+			return false;
+	}
+
+	return true;
+}
+
+bool CanMoveRight()
+{
+	bool lastColumnFilled[4];
+	for (int i = 0; i < 4; i++)
+	{
+		lastColumnFilled[i] = (curTetromino.sprite[i * 4 - 1 - curTetromino.cellOffsetFromR] == 'X');
+		if (lastColumnFilled[i] && bField[curTetromino.pos.X - xFieldOffset + (3 - curTetromino.cellOffsetFromR) + 1 + ((curTetromino.pos.Y - yFieldOffset + i) * FIELD_WIDTH)])
+			return false;
+	}
+
+	return true;
 }
 
 bool CanMoveDown()
