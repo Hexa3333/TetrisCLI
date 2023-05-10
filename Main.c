@@ -14,7 +14,7 @@ LPCSTR TITLE = "TetrisCLI";
 #define FIELD_HEIGHT 18
 
 int screenWidth, screenHeight;
-int score;
+int score, scorePerLine;
 
 bool bField[FIELD_WIDTH * FIELD_HEIGHT];
 int xFieldOffset = 4, yFieldOffset = 4;
@@ -63,11 +63,12 @@ const char message[] = "Keybindings (They're not case sensitive):\n\tArrow Keys:
 void CreateNewTetromino();
 void Rotate();
 void Emplace();
-bool CheckLinesFilled();
+void CheckLinesFilled();
 bool CanRotate();
 bool CanMoveLeft();
 bool CanMoveRight();
 bool CanMoveDown();
+void GameOver();
 
 void dbgPrintField()
 {
@@ -115,6 +116,7 @@ int main(void)
 
 	CreateNewTetromino(); // We'll have to start with something
 
+	scorePerLine = 10;
 	int gameSpeed = 20;
 	int gameSpeedCounter = 0;
 	while (true)
@@ -168,6 +170,8 @@ int main(void)
 					screen[(curTetromino.pos.Y + i) * screenWidth + curTetromino.pos.X + j] = curTetromino.sprite[i * 4 + j];
 			}
 
+		// --- the score ---
+		sprintf(&screen[5 * screenWidth + FIELD_WIDTH + xFieldOffset + 10], "%d", score);
 
 
 		// --- Display Buffer ---
@@ -176,11 +180,7 @@ int main(void)
 
 	CloseHandle(hConsole);
 	free(screen);
-	
-	system("pause");
-	#if 0
-	goto newgame;
-	#endif
+
 	return EXIT_SUCCESS;
 }
 
@@ -335,39 +335,38 @@ void Emplace()
 		for (int x = 0; x < 4; x++)
 			if (curTetromino.sprite[y * 4 + x] == 'X')
 				bField[(curTetromino.pos.Y + (y-yFieldOffset)) * FIELD_WIDTH + curTetromino.pos.X + (x-xFieldOffset)] = FILLED;
-	
+
+	// If you reach the top, you're dead
+	for (int x = 1; x < FIELD_WIDTH-1; x++)
+		if (bField[1 * FIELD_WIDTH + x]) GameOver();
+
+
 	CheckLinesFilled();
 	CreateNewTetromino();
 }
 
-bool CheckLinesFilled()
+void CheckLinesFilled()
 {
 	for (int curLineIndex = 0; curLineIndex < FIELD_HEIGHT-1; curLineIndex++)
 	{
-		bool bLineFull[FIELD_WIDTH];
 		for (int x = 0; x < FIELD_WIDTH; x++)
 		{
-			bLineFull[x] = bField[curLineIndex * FIELD_WIDTH + x];
-			if (bLineFull[x] == EMPTY) break;
+			bool bBlock = bField[curLineIndex * FIELD_WIDTH + x];
+			if (bBlock == EMPTY) goto loopY;
 		}
+		score += scorePerLine;
 
-		int numFilled = 0;
-		for (int i = 0; i < FIELD_WIDTH; i++)
-			if (bLineFull[i]) numFilled++;
+		// Clear the line
+		for (int x = 1; x < FIELD_WIDTH-1; x++)
+			bField[curLineIndex * FIELD_WIDTH + x] = EMPTY;
 
-		if (numFilled == FIELD_WIDTH)
+		// Shift Everything Down
+		for (int y = curLineIndex; y > 0; y--)
 		{
-			// Clear the line
-			for (int x = 1; x < FIELD_WIDTH-1; x++)
-				bField[curLineIndex * FIELD_WIDTH + x] = EMPTY;
-			
-			// Shift Everything Down
-			for (int y = curLineIndex; y > 0; y--)
-			{
-				for (int x = 0; x < FIELD_WIDTH; x++)
-					bField[y * FIELD_WIDTH + x] = bField[(y-1) * FIELD_WIDTH + x];
-			}
+			for (int x = 0; x < FIELD_WIDTH; x++)
+				bField[y * FIELD_WIDTH + x] = bField[(y-1) * FIELD_WIDTH + x];
 		}
+		loopY:
 	}
 }
 
@@ -450,4 +449,12 @@ bool CanMoveDown()
 	// 		return false;
 
     return true;
+}
+
+void GameOver()
+{
+	/*	Attach a new console screen buffer,
+	*	present the game over screen.
+	*	Wanna play again ?
+	*/
 }
