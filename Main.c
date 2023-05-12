@@ -171,7 +171,7 @@ int main(void)
 			}
 
 		// --- the score ---
-		sprintf(&screen[5 * screenWidth + FIELD_WIDTH + xFieldOffset + 10], "%d", score);
+		sprintf(&screen[5 * screenWidth + FIELD_WIDTH + xFieldOffset + 5], "%d", score);
 
 
 		// --- Display Buffer ---
@@ -401,14 +401,12 @@ bool CanRotate()
 	} 
 
 	for (int y = 0; y < 4; y++)
-	{
 		for (int x = 0; x < 4; x++)
 		{
-			if (pseudoNextSprite[y*4+x] == 'X' &&
-				bField[(curTetromino.pos.Y - yFieldOffset + y) * FIELD_WIDTH + curTetromino.pos.X - xFieldOffset + x])
+			if ((pseudoNextSprite[y * 4 + x] == 'X') &&
+				bField[(curTetromino.pos.Y + y - yFieldOffset) * FIELD_WIDTH + curTetromino.pos.X + x - xFieldOffset])
 				return false;
 		}
-	}
 
 	return true;
 }
@@ -427,10 +425,19 @@ bool CanMoveLeft()
 
 bool CanMoveRight() // IT might be a little buggy, fix this one
 {
+	bool colFilled[4] = { EMPTY };
+	for (int x = 0; x < 4; x++)
+	{
+		for (int y = 0; y < 4; y++)
+		{
+			if (curTetromino.sprite[y * 4 + x] == 'X')
+				colFilled[y] = FILLED;
+		}
+	}
+
 	for (int i = 0; i < 4; i++)
 	{
-		bool lastColumnFilled = (curTetromino.sprite[i * 4 - 1 - curTetromino.cellOffsetFromR] == 'X');
-		if (lastColumnFilled && bField[curTetromino.pos.X - xFieldOffset + (3 - curTetromino.cellOffsetFromR) + 1 + ((curTetromino.pos.Y - yFieldOffset + i) * FIELD_WIDTH)])
+		if (colFilled[i] && bField[curTetromino.pos.X - xFieldOffset + (3 - curTetromino.cellOffsetFromR) + 1 + ((curTetromino.pos.Y - yFieldOffset + i) * FIELD_WIDTH)])
 			return false;
 	}
 
